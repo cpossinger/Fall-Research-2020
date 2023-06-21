@@ -1,0 +1,28 @@
+{
+    "id": "32076B43",
+    "path": "~/Documents/Fall_Research_2020/Medfly Research/Report.rmd",
+    "project_path": "Report.rmd",
+    "type": "r_markdown",
+    "hash": "55589411",
+    "contents": "",
+    "dirty": false,
+    "created": 1607660988376.0,
+    "source_on_save": false,
+    "relative_order": 6,
+    "properties": {
+        "tempName": "Untitled1",
+        "cursorPosition": "3,65",
+        "scrollLine": "0",
+        "ignored_words": "medfly,eigenvectors,orthonormal,dimensionality,covariance,integrable,outlier,boxplots\n",
+        "marks": "<:243,541\n>:243,541",
+        "last_setup_crc32": ""
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1608365804,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1608365804153,
+    "read_only": false,
+    "read_only_alternatives": []
+}

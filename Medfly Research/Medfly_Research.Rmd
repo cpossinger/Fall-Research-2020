@@ -1,0 +1,182 @@
+---
+title: "Medfly Research"
+author: "Camden Possinger"
+output: 
+      prettydoc::html_pretty:
+        theme: hpstr
+        highlight: github
+---
+```{r Data Prep, include=FALSE}
+library(plotly)
+library(survminer)
+library(readr)
+library(magrittr)
+library(dplyr)
+library(ggplot2)
+library(survival)
+library(generics)
+library(broom)
+
+# : Load Data ####
+male <- read_delim("/home/cam/Documents/Reseach Fall 2020/Data/MALE.txt",delim = "    ")
+female <- read_delim("/home/cam/Documents/Reseach Fall 2020/Data/FEMALE.txt",delim = "    ")
+
+# : Data Prep ####
+
+age <- c(1:173)
+total_female <- female %>% slice(3718:n()) %>% select(`      Cohort`)
+total_female$`      Cohort` %<>% as.numeric 
+total_male <- male %>% slice(3718:n()) %>% select(`      Cohort`)
+total_male$`      Cohort` %<>% as.numeric 
+female_male_total <- tibble("Age" = age,"Female" = total_female$`      Cohort`,
+                            "Male" = total_male$`      Cohort`) 
+
+
+female_surv_data_prep <- function(vec,vec_age){
+  num_died <- c()
+  num_died_final <- c()
+  new_age <- c()
+  final_vec <- c()
+  for(i in vec){
+    if(i == vec[1]){
+      num_died %<>% append(0) 
+    }
+    else{
+      total_minus_item <- (605528)- i
+      num_died %<>% append(total_minus_item)
+      
+    }
+  }
+  for(k in vec_age){
+    if(k == 1){
+      num_died_final %<>% append(0) 
+    }
+    else{
+      num_died_final %<>% append(num_died[k]-num_died[k-1])  
+    }
+    
+  }
+  
+  for(j in vec_age){
+    new_age %<>% append(c(rep(j ,num_died_final[j]))) 
+  }
+  for(l in vec_age){
+    final_vec %<>% append(c(rep(1,num_died_final[l]))) 
+  }
+  final_data <- data.frame("Age" = new_age,"Dead Female Flies" = final_vec)
+  return(final_data)
+}
+
+
+female_surv_data <- female_surv_data_prep(female_male_total$Female %>% as.integer,age)
+
+male_surv_data_prep <- function(vec,vec_age){
+  num_died <- c()
+  num_died_final <- c()
+  new_age <- c()
+  final_vec <- c()
+  for(i in vec){
+    if(i == vec[1]){
+      num_died %<>% append(0) 
+    }
+    else{
+      total_minus_item <- (598118)- i
+      num_died %<>% append(total_minus_item)
+      
+    }
+  }
+  for(k in vec_age){
+    if(k == 1){
+      num_died_final %<>% append(0) 
+    }
+    else{
+      num_died_final %<>% append(num_died[k]-num_died[k-1])  
+    }
+    
+  }
+  for(j in vec_age){
+    new_age %<>% append(c(rep(j ,num_died_final[j]))) 
+  }
+  for(l in vec_age){
+    final_vec %<>% append(c(rep(1,num_died_final[l]))) 
+  }
+  final_data <- data.frame("Age" = new_age,"Dead Male Flies" = final_vec)
+  return(final_data)
+}
+male_surv_data <- male_surv_data_prep(female_male_total$Male %>% as.integer,age)
+```
+
+### Probability Density Function
+When we look at two samples and their PDF's we can see for what values the sample are the same and what are different
+
+
+
+Male Density Estimation
+```{r echo=FALSE}
+male_density <- total_male$`      Cohort` %>% as.vector %>% density
+male_density
+```
+Female Density Estimation
+```{r echo=FALSE}
+female_density <- total_female$`      Cohort` %>% as.vector %>% density
+female_density
+```
+```{r echo=FALSE}
+total_histogram <- ggplot(data = female_male_total)+geom_histogram(aes(x = Female,y = ..density..),bins = 50,fill = "lightblue") + geom_histogram(data = female_male_total,aes(x = Male,y = ..density..),bins = 50,fill = "pink") + xlab("Male: Light Blue      Female: Pink")
+
+total_histogram %<>% ggplotly
+total_histogram
+
+density_plot <-ggplot(data = female_male_total,aes(x = Female))+
+  geom_density(color = "pink",show.legend = FALSE)+ 
+  geom_density(data = female_male_total,aes(x = Male),color = "lightblue",show.legend = FALSE)+
+  xlab("Male: Light Blue      Female: Pink")
+
+density_plot %<>% ggplotly
+density_plot
+```
+
+### Cumulative Distribution Function
+
+We can use the estimated Cumulative Distribution Function to calcualte the cumulative probability for a given x-value and determine if the probability that a data value is less than or equal to a certain value.
+
+```{r echo=FALSE}
+female_cdf <- ecdf(female_male_total$Female)
+female_cdf(0.0)
+male_cdf <- ecdf(female_male_total$Male)
+male_cdf(0.0)
+```
+```{r echo=FALSE}
+cdf_plot <- ggplot(female_male_total) + 
+  stat_ecdf(aes(x = Female),geom = "step",pad = FALSE,color = "pink")+
+  stat_ecdf(aes(x = Male),geom = "step",pad = FALSE,color = "lightblue")+
+  xlab("Male: Light Blue      Female: Pink")
+cdf_plot %<>% ggplotly
+cdf_plot
+```
+
+### Survival Function
+
+The probability that a fly will survive beyond any specified time.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+female_surv <- survfit(Surv(female_surv_data$Age,female_surv_data$Dead.Female.Flies)~1,data = female_surv_data)
+male_surv <- survfit(Surv(male_surv_data$Age,male_surv_data$Dead.Male.Flies)~1,data = male_surv_data)
+fit <- list("Male"=male_surv,"Female"=female_surv)
+
+surv_plot <- ggsurvplot(
+  fit = fit,
+  combine = TRUE,
+  conf.int = TRUE,
+  conf.int.style = "step",
+  risk.table = TRUE,
+  tables.theme = theme_cleantable(),
+  palette = c("lightblue","pink"),
+  xlab = "Days",
+  ylab = "Overall Survival Probability"
+)
+surv_plot$plot %>% ggplotly
+```
+
+
+

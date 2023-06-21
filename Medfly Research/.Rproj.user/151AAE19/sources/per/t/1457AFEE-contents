@@ -1,0 +1,22 @@
+library(fdapace)
+library(magrittr)
+library(purrr)
+observed_functions_male <- df_nested_hazard$data %>% map(~.x %>% extract2("hazard_male"))
+observed_functions_male %<>% map(~.x %>% log)
+male_nans <- observed_functions_male %>% map(~.x[1] %>% is.nan) %>% unlist
+observed_functions_male %<>% map_if(.p = male_nans,.f = ~.x %>% assign_in(c(1),NA))
+
+observed_functions_female <- df_nested_hazard$data %>% map(~.x %>% extract2("hazard_female"))
+observed_functions_female %<>% map(~.x %>% log)
+female_nans <- observed_functions_male %>% map(~.x[1] %>% is.nan) %>% unlist
+observed_functions_female %<>% map_if(.p = female_nans,.f = ~.x %>% assign_in(c(1),NA))
+
+observed_age <- df_nested_hazard$data %>% map(~.x %>% extract2("age")) 
+
+
+fpca_male <- FPCA(observed_functions_male,observed_age,optns = list(dataType = "Dense"))
+fpca_female <- FPCA(observed_functions_female,observed_age,optns = list(dataType = "Dense"))
+
+
+
+

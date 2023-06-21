@@ -1,0 +1,74 @@
+library(tidyverse)
+library(plotly)
+library(frechet)
+library(fdapace)
+library(magrittr)
+library(purrr)
+library(dplyr)
+library(ggplot2)
+library(purrr)
+library(furrr)
+
+plan(multiprocess,workers = 3) 
+
+ df_nested_female$data %<>% future_imap(~df_nested_female$data[[.y]] %>% select(age,hazard)) 
+ 
+ 
+df_nested_male$data %<>% future_imap(~df_nested_male$data[[.y]] %>% select(age,hazard)) 
+
+df_nested_hazard <- df_nested_male %>% left_join(df_nested_female,by = c("Cohort","Size","Cage"))
+
+new_column <- df_nested_hazard$data.x %>% future_imap(~left_join(df_nested_hazard$data.x[[.y]],df_nested_hazard$data.y[[.y]],by = c("age")))
+
+df_nested_hazard %<>% add_column(data = new_column) 
+df_nested_hazard %<>% select(Cohort,Size,Cage,data)
+df_nested_hazard$data %<>% future_imap(~ df_nested_hazard$data[[.y]] %>% select(age,hazard_male = hazard.x,hazard_female = hazard.y))  
+
+
+df_nested_hazard$data %<>% future_imap(~df_nested_hazard$data[[.y]] %>% slice(1:51)) 
+
+# Get rid of outliers
+ df_nested_hazard %<>% filter(Cohort != 3,Cohort != 1) 
+ outlier_cages <- c(5,6,8,54,30,72,146,73,97,106,130,129,104,110,126,7,4,2,99,81,119,102,101,71,78,80,1,79,76,96,77,48,74) %>% as.character
+ df_nested_hazard %<>% filter(!(Cage %in% outlier_cages))
+
+
+
+ 
+ five_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(5))  %>% unlist %>% log
+ ten_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(10))  %>%  unlist %>% log
+ fifteen_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(15))  %>% unlist %>% log
+ twenty_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(20))  %>% unlist%>% log
+ twenty_five_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(25))  %>% unlist%>% log
+ thirty_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(30))  %>% unlist%>% log
+ thirty_five_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(35))  %>% unlist%>% log
+ forty_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(40))  %>% unlist%>% log
+ forty_five_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(45))  %>% unlist%>% log
+ fifty_male <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_male") %>%  extract(50))  %>% unlist%>% log
+
+ box_plot_data_male <- list(five_male,ten_male,fifteen_male,twenty_male,twenty_five_male,thirty_male,thirty_five_male,forty_male,forty_five_male,fifty_male)
+
+
+ 
+ five_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(5))  %>% unlist %>% log
+ ten_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(10))  %>% unlist %>% log
+ fifteen_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(15))  %>% unlist %>% log
+ twenty_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(20))  %>% unlist %>% log
+ twenty_five_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(25))  %>% unlist %>% log
+ thirty_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(30))  %>% unlist %>% log
+ thirty_five_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(35))  %>% unlist %>% log
+ forty_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(40))  %>% unlist %>% log
+ forty_five_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(45))  %>% unlist %>% log
+ fifty_female <- df_nested_hazard$data %>% future_map(~.x %>% extract2("hazard_female") %>%  extract(50))  %>% unlist %>% log
+
+ box_plot_data_female <- list(five_female,ten_female,fifteen_female,twenty_female,twenty_five_female,thirty_female,thirty_five_female,forty_female,forty_five_female,fifty_female)
+
+multiples_of_five <- seq(0,50,5) %>% future_map(~.x) 
+multiples_of_five <- multiples_of_five[-1]
+
+MeanCI_male <- GetMeanCI(df_nested_hazard$data %>%  future_map(~.x %>% extract2("hazard_male")),df_nested_hazard$data %>%
+                                                                 future_map(~.x %>% extract2("age")))
+
+MeanCI_female <- GetMeanCI(df_nested_hazard$data %>%  future_map(~.x %>% extract2("hazard_female")),df_nested_hazard$data %>%
+                                                                 future_map(~.x %>% extract2("age")))
+saveRDS(df_nested_hazard,file = "df_nested_hazard.RDS")

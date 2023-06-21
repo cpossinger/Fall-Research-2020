@@ -1,0 +1,386 @@
+---
+title: "Functional Analysis of Male and Female Medfly Hazard Functions"
+author:
+  - name: Camden Possinger
+    affiliation: UC Davis
+date: "`May 2021`"
+
+bibliography: bibliography.bib
+output:  
+    distill::distill_article:
+        toc: True
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Introduction
+
+One of the greatest mysteries that humankind has ever tried to solve is the secret of longevity. Why do some live shorter and some longer? Can we do anything to prolong our longevity? We don't have all the answers yet, but humankind has been inching closer and closer to uncovering the mysterious relationships that affect longevity. This study will not fully uncover these relationships, but hopefully it will contribute and spark interest in this area of study in order to one day fully understand human longevity. In the initial exploratory data analysis and eventual formal analysis we aim to analyze the variance of male and female medfly log transformed hazard functions.
+
+## Why Medflies?
+
+![[@lCeratitisCapitata1915]](/home/cam/Downloads/medfly.jpg)
+
+When considering longevity Medflies aren't the model species most people would think of first. Medflies only live to be a maximum of fifty days old, which is enough time for them to reproduce and either get eaten or die of old age. The medfly's short lifespan is an advantage for us as researchers because we only have to wait fifty days for a whole generation to be born and die. If something goes wrong less time will be wasted on that research. Traditional model species like mice live for a couple years, which is a longer time investment. Another advantage of using Medflies as a model species is that they are not protected by animal rights regulations. This is especially helpful in studies that aim to determine how stress affects longevity. Medflies are also cheaper and easier to manage in large numbers, which is advantageous for statistical studies whose power is fueled by large quantities of data.  
+
+There have been many different types of studies that use Medflies as a model species and study various aspects of longevity. Since there are no animal rights protections for medflies researchers are able to study how standardized acute trauma affects a fly's remaining life expectancy. This allows researchers the ability to study frailty and potentially extrapolate those insights to other animal models [@careyDietShapesMortality2016].\
+
+Studying medflies also gives researchers a look into evolutionary mechanics. It is known that females generally live longer than males in Medflies. Researchers have attributed this to the female reproductive period where resources that would normally be allocated for maintenance and repair are used for reproduction [@mullerEarlyMortalitySurge1997 p.3]. This reproduction possibly weeds out the weaker female flies and creates a healthier population moving forward. This makes sense from an evolutionary perspective because it is not in a species' best interest to allow frailer females the opportunity to reproduce. If weak female flies are able to reproduce then the species could not evolve in a beneficent way.\
+
+Finally researchers are able to study other possible indicators of mortality like declining neurological behavior. When fruit flies are close to the end of their lives they spend most of their time on their backs helpless and unable to move. This supine behavior has been linked as an biological marker that a fly is at the end of it's life. This has potential implications for research of human diseases that cause neurological decline like Parkinson's disease [@papadopoulosSupineBehaviourPredicts2002]. 
+
+Medflies are considered a nuisance by most but for us as researchers they serve as a useful model species, which we can study to understand longevity in the animal kingdom and in humans.
+
+## Probability Density Function, Survival Function, Hazard Function
+
+<center>
+
+Our area of interest for this research is the hazard function, but before we talk about the hazard function we need to construct it first. In order to construct the hazard function we need to discuss the Probability Density Function of the survival time and Survival Function. Since our distribution of time is discrete the Probability Density Function is:
+
+</center>
+
+\
+
+<center>
+
+$f(x) = Pr[X = x]$
+
+</center>
+
+\
+
+<center>
+
+where the Probability Density Function is the probability that the variate has the value x. [@RelatedDistributions]
+
+</center>
+
+\
+
+<center>
+
+Next we need the Survival Function which indicates the time before a certain event happens. The Survival Function $S(t)$ is defined as:
+
+</center>
+
+\
+
+<center>
+
+$S(t) = Pr[T > t]$
+
+</center>
+
+\
+
+<center>
+
+where $t$ is some time and $T$ is some random variable that represents the time of an event happening which in most cases is the time of death [@SurvivalAnalysis2020].
+
+</center>
+
+\
+
+<center>
+
+Now that we have defined the Probability Density Function and the Survival Function we can define the Hazard Function. The Hazard Function denoted as $h_Y(y)$ is defined as:
+
+</center>
+
+\
+
+<center>
+
+$h_Y(y) = \frac{f_Y(y)}{S_Y(y)}$
+
+</center>
+
+\
+
+<center>
+
+where $f_Y(y)$ is the probability density function of survival time Y and $S_Y$ is the survival function. The hazard function in our case represents the instantaneous risk of death at a point in time [@stephanieHazardFunctionSimple2016].
+
+</center>
+
+## Exploratory Data Analysis
+
+```{r}
+load(paste0(getwd(),"/","medfly_workspace.RData"))
+```
+
+In a lab about 167 cages containing about 3600 medflies were given food and water. These flies flew around their cages and eventually died, when they died the files fell to the bottom of the cage and were recorded by lab technicians. Each fly's gender, size, cage, cohort, and the number of flies that were alive on a given day were recorded in our initial table formatted data. Han Chen helped transform this unusual data format into a format that was more standard. From this standard formatted data I was able to use various functions in the dplyr package [@GrammarDataManipulation] to create new columns that included the survival function and the probability density function. These functions needed to be smoothed which was done using the fdapace package [@carrollFdapaceFunctionalData2020]. Once those functions were calculated and smoothed I was able to use the same procedure to create and smooth the hazard function. Throughout this exploratory data prep and visualization I used the incredible purrr package extensively [@FunctionalProgrammingTools].\
+
+After repeating this process for both the male medfly data and the female medfly data the next step was to only include both the male medfly hazard function and the female medfly hazard function while maintaining each cage's relationship to the other variables in the data for filtering. This was accomplished by creating a nested tibble with columns to represent various cage related information including the hazard functions for each cage in a list column of individual tibbles. The nested tibble is included in the Rda file as "df_nested_hazard" if you would like to explore it further.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(magrittr)
+library(purrr)
+library(furrr)
+library(plotly)
+library(fdapace)
+library(scales)
+library(ggpubr)
+#library(kableExtra)
+```
+
+Once this nested tibble was created the next step was to visualize these cage wise log transformed hazard functions. Initially I created a shiny dashboard [@ShinyDashboard], but we noticed that these plots contained outlier hazard functions either due to unintentional experimental bias or simply poor data quality. We identified and removed forty six of these cages which left us with a total of one hundred and twenty one cages.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, layout = "l-page"}
+
+gg <- ggplot()
+          gg <- gg + df_nested_hazard %>% extract2("data") %>% 
+            future_imap(~geom_line(mapping = aes(x = age, y = hazard_female,color = "Female",text = paste0("Cage: ",df_nested_hazard %>% 
+                                                                                                             extract2("Cage") %>% extract2(.y),"<br>",
+                                                                                                           "Cohort: ",df_nested_hazard %>% 
+                                                                                                             extract2("Cohort") %>% extract2(.y))),data = .x),.progress = TRUE) 
+          gg <- gg + scale_color_manual(values = rep("pink",df_nested_hazard %>% extract2("data") %>%  length))+
+            scale_y_continuous(trans = log_trans(),breaks = log_breaks(n = 7,base = exp(1) ))+xlab("Age")+ylab("Hazard Function")+
+            geom_line(aes(x  = 1:51,y = GetMeanCurve(Ly = (df_nested_hazard$data %>% map(~.x %>% extract2("hazard_female"))), Lt = (df_nested_hazard$data %>% map(~.x %>% extract2("age"))))$mu))+
+            labs(color = "") 
+          
+          gg %<>% ggplotly(tooltip = "text") %>% config(displayModeBar = FALSE) %>%  layout(annotations = 
+                                                                                              list(x = 1, y = -0.1, text = "(Hazard Function is Log Transformed)", 
+                                                                                                   showarrow = F, xref='paper', yref='paper', 
+                                                                                                   xanchor='right', yanchor='auto', xshift=0, yshift=0,
+                                                                                                   font=list(size=9, color="#e75480")))                        
+
+
+gg_male <- ggplot()
+          gg_male <- gg_male + df_nested_hazard %>% extract2("data") %>% 
+            future_imap(~geom_line(mapping = aes(x = age, y = hazard_male,color = "Male",text = paste0("Cage: ",df_nested_hazard %>% 
+                                                                                                         extract2("Cage") %>% extract2(.y),"<br>",
+                                                                                                       "Cohort: ",df_nested_hazard %>% 
+                                                                                                         extract2("Cohort") %>% extract2(.y))),data = .x),.progress = TRUE) 
+          gg_male <- gg_male + scale_color_manual(values = rep("lightblue",df_nested_hazard %>% extract2("data") %>%  length))+
+            scale_y_continuous(trans = log_trans(),breaks = log_breaks(n = 7,base = exp(1) ))+xlab("Age")+ylab("Hazard Function")+
+             geom_line(aes(x  = 1:51,y = GetMeanCurve(Ly = (df_nested_hazard$data %>% map(~.x %>% extract2("hazard_male"))), 
+                                                     Lt = (df_nested_hazard$data %>% map(~.x %>% extract2("age"))))$mu))+
+            labs(color = "")
+           
+          gg_male %<>% ggplotly(tooltip = "text") %>% config(displayModeBar = FALSE) %>%  layout(annotations = 
+                                                                                              list(x = 1, y = -0.1, text = "(Hazard Function is Log Transformed)", 
+                                                                                                   showarrow = F, xref='paper', yref='paper', 
+                                                                                                   xanchor='right', yanchor='auto', xshift=0, yshift=0,
+                                                                                                   font=list(size=9, color="#e75480")))                        
+          gg
+          gg_male
+```
+
+After the outlier cages were removed we started comparing the log transformed hazard functions of the male and female medflies to see if there were any differences in these plots above. One difference stood out among the others. At about day fifty which is the end of the possible lifespan of a medfly the variance of the male medfly log transformed hazard functions was greater than the variance of the female medfly log transformed hazard functions. We hypothesized that this was a result of another observation between these log transformed hazard functions. During about day twenty to thirty the female log transformed hazard functions were noticeably larger than males most likely because this is when female medflies reproduce. Since reproducing is a resource intensive process frailer female medflies would die yielding less frail populations at day fifty. The male medflies do not undergo this reproduction process so as a result the variation of frailty for a given population should be greater and thus the hazard functions should have more variance at day fifty.\
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,layout = "l-page"}
+
+boxplot_female <- ggplot()
+    boxplot_female <- boxplot_female + box_plot_data_female %>%
+      future_map2(multiples_of_five,~geom_boxplot(data = box_plot_data_female %>% as.data.frame(),aes(x = .y,y = .x,color = "Female")))+
+      scale_color_manual(values = "pink")+
+      geom_line(aes(x  = 1:51,y = GetMeanCurve(Ly = (df_nested_hazard$data %>% map(~.x %>% extract2("hazard_female") %>% log)),
+                                               Lt = (df_nested_hazard$data %>% map(~.x %>% extract2("age"))))$mu))+
+      xlab("Age")+ylab("Log Transformed Hazard Function")+labs(color = "")
+
+    boxplot_female %<>% ggplotly %>% config(displayModeBar = FALSE)
+    boxplot_female
+    
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,layout = "l-page"}
+
+    boxplot_male <- ggplot()
+    boxplot_male <- boxplot_male + box_plot_data_male %>%
+      future_map2(multiples_of_five,~geom_boxplot(data = box_plot_data_male %>% as.data.frame(),aes(x = .y,y = .x,color = "Male")))+
+      scale_color_manual(values = "lightblue")+
+      geom_line(aes(x  = 1:51,y = GetMeanCurve(Ly = (df_nested_hazard$data %>% map(~.x %>% extract2("hazard_male") %>% log)),
+                                               Lt = (df_nested_hazard$data %>% map(~.x %>% extract2("age"))))$mu))+
+      xlab("Age")+ylab("Log Transformed Hazard Function")+labs(color = "")
+
+    boxplot_male %<>% ggplotly %>% config(displayModeBar = FALSE)
+    boxplot_male
+    
+    
+
+```
+
+This variation is more visible in the boxplots above, it is clear that the whiskers are greater for the male hazard functions than the female hazard functions. The next step was to obtain the principal components of from the FPCA process. The first three eigenfunctions as well as the mean curves for all cages can be viewed below.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,layout = "l-page"}
+mean_curve_female_plot <- ggplot() +  
+      geom_line(aes(x  = 1:51,
+                    y = GetMeanCurve(Ly = (df_nested_hazard$data %>% map(~.x %>% extract2("hazard_female"))), 
+                                     Lt = (df_nested_hazard$data %>% map(~.x %>% extract2("age"))))$mu))+
+      geom_ribbon(aes(x = 1:51,ymin = MeanCI_female$CI$lower, 
+                      ymax =MeanCI_female$CI$upper,fill = "Female"),
+                      alpha = 0.2)+
+      xlab("Age")+ylab("Log Hazard Function")+scale_fill_manual(values = c("#FF64B8"))+labs(fill = "")
+    mean_curve_female_plot %<>% ggplotly %>% config(displayModeBar = FALSE)  
+    mean_curve_female_plot
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,layout = "l-page"}
+mean_curve_male_plot <- ggplot() +  
+      geom_line(aes(x  = 1:51,
+                    y = GetMeanCurve(Ly = (df_nested_hazard$data %>% map(~.x %>% extract2("hazard_male"))), 
+                                     Lt = (df_nested_hazard$data %>% map(~.x %>% extract2("age"))))$mu))+
+      geom_ribbon(aes(x = 1:51,ymin = MeanCI_male$CI$lower, 
+                      ymax =MeanCI_male$CI$upper,fill = "Male"),
+                      alpha = 0.2)+
+      xlab("Age")+ylab("Log Hazard Function")+scale_fill_manual(values = c("#77C3EC"))+labs(fill = "")
+    mean_curve_male_plot %<>% ggplotly %>% config(displayModeBar = FALSE)
+    mean_curve_male_plot
+```
+
+In the above mean curves with their respective confidence ribbons we can see that the mean log transformed hazard function for male medflies at day fifty is larger than the respective log transformed hazard function for female medflies at day fifty. This result is possibly due to the assumption that frailer female flies get weeded out of the population during reproduction leaving a less frail population overall. Male medflies do not go through this weeding reproduction period, so their population is more frail by comparison to the female population resulting in a larger log transformed hazard function at day fifty.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,layout = "l-page"}
+eigenfunctions_female_plot <- ggplot()+geom_line(aes(x = 1:51,y = fpca_female$phi[,1],color = "Female",linetype = "1"))+
+      geom_line(aes(x = 1:51,y = fpca_female$phi[,2],color = "Female",linetype = "2"))+
+      geom_line(aes(x = 1:51,y = fpca_female$phi[,3],color = "Female",linetype = "3"))+
+      scale_color_manual(values = c("#FF64B8"))+xlab("Age")+ylab("Female EigenFunctions")+labs(color = "",linetype = "")
+    eigenfunctions_female_plot %<>%  ggplotly %>% config(displayModeBar = FALSE)
+    eigenfunctions_female_plot
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,layout = "l-page"}
+
+eigenfunctions_male_plot <- ggplot()+geom_line(aes(x = 1:51,y = fpca_male$phi[,1],color = "Male",linetype = "1"))+
+      geom_line(aes(x = 1:51,y = fpca_male$phi[,2],color = "Male",linetype = "2"))+
+      geom_line(aes(x = 1:51,y = fpca_male$phi[,3],color = "Male",linetype = "3"))+
+      scale_color_manual(values = c("#77C3EC"))+xlab("Age")+ylab("Male Eigenfunctions")+labs(color = "",linetype = "")
+    eigenfunctions_male_plot %<>%  ggplotly %>% config(displayModeBar = FALSE)
+    eigenfunctions_male_plot
+```
+
+In the eigenfunctions calculated using the FPCA function in fdapace [@carrollFdapaceFunctionalData2020] we can see at day fifty there is a similar difference in variance between the male medflies and female medflies. The female medfly eigenfunction variance is noticebly smaller than the male medfly eigenfunction variance at day fifty which is a similar result to what we observed in the sample log transformed hazard functions. In order to formally analyze these observations we will need to conduct Functional Principal Component Analysis on this sample of log transformed hazard functions.
+
+## Functional Principal Component Analysis
+
+In today's world the cost of data collection has gone down and computing power has gone up creating many situations where high dimensional data is being collected. When each data point is recorded enough times we get dense functional data that emulates a function or curve. The problem with this type of analysis is that it is infinitely dimensional and ironically it's difficult to obtain any information from an infinite amount of information. Thankfully there are dimensionality reduction methods that take an infinitely dimensional problem and coverts it into a finite problem. One of the main dimension reduction methods is Principal Component Analysis (PCA). I'm not qualified yet to explain all of the intricate linear algebra theory behind this method, but conceptually PCA takes a complex data matrix, which has a potentially noisy or redundant native basis and changes that basis to another basis that will best represent the given data. To achieve this goal a general solution is to use Singular Value Decomposition (SVD) to decompose an arbitrary $m \times n$ data matrix X so that it can be expressed in terms of:
+
+<center>
+
+An orthogonal matrix of orthonormal eigenvectors V where $V = [\hat{v_1} \hat{v_2} . . . \hat{v_m}]$ for the symmetric matrix $X^TX$
+
+</center>
+
+\
+
+<center>
+
+A diagonal matrix $\Sigma$ consisting of rank ordered singular values $\sigma_{i}$ derived by $\sigma_{i} = \sqrt{\lambda_{i}}$
+
+</center>
+
+\
+
+<center>
+
+where $\lambda_{i} = \{\lambda_1,\lambda_2, . . .,\lambda_{r}\}$ are the eigenvalues of the eigenvectors in V for $X^TX$
+
+</center>
+
+\
+
+<center>
+
+Another orthogonal matrix U defined by $U = [\hat{u_1} \hat{u_2} . . . \hat{u_n}]$ where $\hat{u_i}$ is defined as $\hat{u_n} = \frac{1}{\sigma_{i}}X\hat{v_i}$
+
+<center>
+
+ 
+
+<center>
+
+We can express X such that $X = V\Sigma U$
+
+</center>
+
+\
+
+<center>
+
+Continuing with the PCA method if we have an $m \times n$ data matrix X an $n \times m$ matrix Y can be expressed as:
+
+</center>
+
+ 
+
+<center>
+
+$Y = \frac{1}{\sqrt{n}}X^T$.
+
+</center>
+
+\
+
+<center>
+
+It can be shown that $Y^TY = C_{x}$ where $C_{x}$ is the covariance matrix of X. We can calculate the SVD of Y which contains the eigenvectors of $C_{x}$ in V. These eigenvectors in the columns of V are the principal components of X. V is also an orthonormal basis that spans the column space of X. Almost all of this explanation was summarized in a fantastic tutorial paper by Jonathon Shlens [@shlensTutorialPrincipalComponent2014].
+
+</center>
+
+ 
+
+The beauty and possible curse of PCA is that you will always be able to obtain an answer from any arbitrary matrix. PCA is a useful dimension reduction tool in most situations, but for functional data it can be problematic. For functional data the problem is that for our $m \times n$ data matrix n becomes infinity creating an infinite-dimensional matrix that lives in a Hilbert Space. This curse of dimensionality stems from sparse data when the dimensionality becomes high. Even though we will get a numerical answer from using PCA it has been shown that under this high dimensionality the sample covariance matrix is not a good estimate for the population covariance matrix [@shangSurveyFunctionalPrincipal2014]. To overcome this observation Functional Principal component Analysis was developed.
+
+Functional Principal Component Analysis (FPCA) is similar to PCA but the notation is converted to accommodate for functions that live in a Hilbert Space. "Vectors are replaced by functions, matrices by compact linear operators, covariance matrices by covariance operators, and scalar products in vector space by scalar products in square-integrable functional space." [@shangSurveyFunctionalPrincipal2014] The goal of FPCA is the same as PCA: find the principal components that maximize the variance while reducing the number of dimensions.
+
+## Winter Quarter 2021 Updates
+
+This quarter we dove deeper into the various eigenfunctions produced by FPCA and their interpretations
+
+```{r  echo=FALSE,  out.width = '100%',fig.align = "center"}
+knitr::include_graphics("/home/cam/Pictures/eigenfunctions.png")
+```
+
+First we have a plot of the first log-hazard eigenfunction for both male and female files. These functions can help us get a sense of how the overarching linear operator behaves.
+
+```{r  echo=FALSE,  out.width = '100%',fig.align = "center"}
+knitr::include_graphics("/home/cam/Pictures/deriv_eigenfunctions.png")
+```
+
+Similarly this plot displays the first log-hazard derivative eigenfunction.
+
+```{r  echo=FALSE,  out.width = '100%',fig.align = "center"}
+knitr::include_graphics("/home/cam/Pictures/mean_curves.png")
+```
+
+Next here is a plot of the male and female mean log-hazard function that gives a good view of the reproduction period that female flies have to undergo. The males however have a higher log-hazard mean function which is in agreement with our previous exploratory analysis.
+
+```{r  echo=FALSE,  out.width = '100%',fig.align = "center"}
+knitr::include_graphics("/home/cam/Pictures/deriv_mean_curves.png")
+```
+
+This plot is the mean log hazard derivative functions for both male and female flies. It's interesting to note that at about day twenty the female log hazard function barely changes after that date while it takes the males until day thirty to reach the same level of stability. The female mean log hazard derivative function is also much steeper than the male mean log hazard derivative function which indicates a more dramatic change in a shorter amount of time.
+
+```{r echo=FALSE,  out.width = '100%',fig.align = "center"}
+knitr::include_graphics("/home/cam/Pictures/female_mov_2.png")
+```
+
+This plot is the mode of variation for the second female eigenfunction which shows an interesting pattern. There seems to be three distinct age periods, early life, reproduction period, and old age. This can be helpful for further study into these specific age periods.
+
+```{r  echo=FALSE,  out.width = '100%',fig.align = "center"}
+knitr::include_graphics("/home/cam/Pictures/male_mov_2.png")
+```
+
+In this plot of the mode of variation for the second male eigenfunction we also see this pattern of three distinct age periods, but the middle period is not a reproduction period. It seems that the majority of the variance for this eigenfunction is explained in the early life and late life of a male fly. The variance in the middle age period is interesting because it takes place about five to ten days after the female reproduction period. More study needs to happen to understand these modes of variation.
+
+```{r  echo=FALSE,  out.width = '100%',fig.align = "center"}
+knitr::include_graphics("/home/cam/Pictures/FVE.png")
+```
+
+Next this is a table of the cumulative fraction of variance explained and the fraction of variance explained for each eigenfunction. Here the table explains these metrics for the first eight male log-hazard eigenfunctions. We can see that in this case and similarly for the other cases most of the variance is explained in the first three or four eigenfunctions.
+
+```{r  echo=FALSE, out.width = '100%',fig.align = "center"}
+knitr::include_graphics("/home/cam/Pictures/scores.png")
+```
+
+This final plot compares the scores of male and female log-hazard or log-hazard derivative eigenfunctions. We tried fitting a Functional Concurrent Model to try and explain a potential interaction effect between male and female log-hazard functions, but we found a serious amount of multicollinearity that compromised the results. This multicollinearity can also be seen in the linear relationship between the first eigenfunction for male and female flies.
+
+
+
+
+
+We are optimistic about the variation we have found in our exploratory data analysis and I am excited to develop a formal analysis for this observation. I have learned an enormous amount this quarter and I'm excited to learn more next quarter! This exploratory analysis would not be possible without others and I want to give a big thank you to Professor Hans Georg Mueller, Han Chen, and Joanne Xiong!
